@@ -1,0 +1,21 @@
+{
+    "name": "report-monitor",
+    "version": "1.0.0",
+    "description": "ClickHouse overdue reports monitor with MAX notifications",
+    "type": "module",
+    "main": "src/app.js",
+    "scripts": {
+      "start": "node src/app.js",
+      "dev": "node --watch src/app.js",
+      "test": "node test.js"
+    },
+    "dependencies": {
+      "@clickhouse/client": "^1.10.0",
+      "@maxhub/max-bot-api": "0.2.4",
+      "dotenv": "^16.4.5",
+      "node-cron": "^3.0.3",
+      "pino": "^9.3.2",
+      "pino-pretty": "^11.2.2",
+      "zod": "^3.23.8"
+    }
+  }
