@@ -46,7 +46,8 @@ export async function checkReports() {
                 organization: report.organization,
                 reportName: report.report_name,
                 status: report.status,
-                comment: report.comment
+                comment: report.comment,
+                deadline
             };
 
             if (isSameDay(deadline, now)) {

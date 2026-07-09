@@ -1,10 +1,27 @@
 const MAX_MESSAGE_LENGTH = 4000;
 
-// Запас под суффикс " (часть N из M)", который дописывается
-// к заголовку уже после того, как чанки посчитаны.
-const PART_SUFFIX_RESERVE = 40;
+// Запас под возможный суффикс "(часть N из M)", заголовок и PS,
+// которые добавляются уже после того, как блоки посчитаны.
+const RESERVE_MARGIN = 60;
 
-function buildUnits(reports) {
+const PS_LINE =
+    "PS: после заполнения отчета не забывайте переводить его в статус \"Подготовлен\"";
+
+function formatDeadline(date) {
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+
+}
+
+// Группирует отчеты по названию, а внутри - по дедлайну,
+// чтобы не повторять его для каждой МО, у которой он совпадает.
+function buildReportBlocks(reports, buildReportLine) {
 
     const groupedByReport = reports.reduce((acc, report) => {
 
@@ -18,22 +35,17 @@ function buildUnits(reports) {
 
     }, {});
 
-    const units = [];
+    const blocks = [];
 
     for (const [reportName, reportEntries] of Object.entries(groupedByReport)) {
 
-        units.push([`📄 ${reportName}`, ""]);
-
-        // Внутри отчета группируем по периоду/комментарию, чтобы не
-        // повторять их для каждой МО, у которой они совпадают.
         const groupedByDeadline = reportEntries.reduce((acc, report) => {
 
-            const key = `${report.reportPeriod}|${report.comment || ""}`;
+            const key = report.deadline.getTime();
 
             if (!acc[key]) {
                 acc[key] = {
-                    reportPeriod: report.reportPeriod,
-                    comment: report.comment,
+                    deadline: report.deadline,
                     organizations: []
                 };
             }
@@ -44,60 +56,56 @@ function buildUnits(reports) {
 
         }, {});
 
-        for (const { reportPeriod, comment, organizations } of Object.values(groupedByDeadline)) {
+        for (const { deadline, organizations } of Object.values(groupedByDeadline)) {
 
-            const lines = [`📅 ${reportPeriod}`];
+            const lines = [
+                buildReportLine(reportName, formatDeadline(deadline)),
+                "Не заполнили:",
+                ...organizations.map(organization => `🏢 ${organization}`)
+            ];
 
-            if (comment) {
-                lines.push(`💬 ${comment}`);
-            }
-
-            for (const organization of organizations) {
-                lines.push(`🏢 ${organization}`);
-            }
-
-            lines.push("");
-
-            units.push(lines);
+            blocks.push(lines.join("\n"));
 
         }
 
-        units.push(["────────────────", ""]);
-
     }
 
-    return units;
+    return blocks;
 
 }
 
-// Разбивает отчеты на несколько сообщений, если общий текст
+// Разбивает блоки на несколько сообщений, если общий текст
 // превышает лимит MAX API (4000 символов на сообщение).
-function formatReportsList(reports, title) {
+function formatReportsMessage(reports, { greeting, intro, buildReportLine }) {
 
     if (!reports || reports.length === 0) {
         return [];
     }
 
-    const units = buildUnits(reports);
+    const blocks = buildReportBlocks(reports, buildReportLine);
 
-    const headerLength = title.length + PART_SUFFIX_RESERVE + 1;
+    const header = greeting
+        ? `${greeting} ${intro}`
+        : intro;
+
+    const reserve = RESERVE_MARGIN + header.length + PS_LINE.length;
 
     const chunks = [];
     let current = [];
-    let currentLength = headerLength;
+    let currentLength = reserve;
 
-    for (const unit of units) {
+    for (const block of blocks) {
 
-        const unitLength = unit.join("\n").length + 1;
+        const blockLength = block.length + 2;
 
-        if (current.length > 0 && currentLength + unitLength > MAX_MESSAGE_LENGTH) {
+        if (current.length > 0 && currentLength + blockLength > MAX_MESSAGE_LENGTH) {
             chunks.push(current);
             current = [];
-            currentLength = headerLength;
+            currentLength = reserve;
         }
 
-        current.push(...unit);
-        currentLength += unitLength;
+        current.push(block);
+        currentLength += blockLength;
 
     }
 
@@ -107,35 +115,47 @@ function formatReportsList(reports, title) {
 
     const totalParts = chunks.length;
 
-    return chunks.map((chunkLines, index) => {
+    return chunks.map((blocksInChunk, index) => {
 
-        const chunkTitle = totalParts > 1
-            ? `${title} (часть ${index + 1} из ${totalParts})`
-            : title;
+        const parts = [];
 
-        return [chunkTitle, "", ...chunkLines].join("\n");
+        if (totalParts > 1) {
+            parts.push(`(часть ${index + 1} из ${totalParts})`);
+        }
+
+        parts.push(header);
+        parts.push(...blocksInChunk);
+        parts.push(PS_LINE);
+
+        return parts.join("\n\n");
 
     });
 
 }
 
 export function formatDueTodayReports(reports) {
-    return formatReportsList(
-        reports,
-        "📋 Отчеты к сдаче сегодня"
-    );
+    return formatReportsMessage(reports, {
+        greeting: "Доброе утро!",
+        intro: "Уважаемые коллеги, напоминаю о необходимости заполнения следующих отчетов в 1С:Свод отчетов:",
+        buildReportLine: (reportName, deadlineStr) =>
+            `"${reportName}" до "${deadlineStr}"`
+    });
 }
 
 export function formatDueLaterReports(reports) {
-    return formatReportsList(
-        reports,
-        "⏰ Отчеты к сдаче сегодня"
-    );
+    return formatReportsMessage(reports, {
+        greeting: null,
+        intro: "Уважаемые коллеги, напоминаю о необходимости заполнения следующих отчетов в 1С:Свод отчетов:",
+        buildReportLine: (reportName, deadlineStr) =>
+            `"${reportName}" до "${deadlineStr}"`
+    });
 }
 
 export function formatOverdueReports(reports) {
-    return formatReportsList(
-        reports,
-        "🚨 Просроченные отчеты (сегодня)"
-    );
+    return formatReportsMessage(reports, {
+        greeting: null,
+        intro: "Уважаемые коллеги, следующие отчеты в 1С:Свод отчетов просрочены:",
+        buildReportLine: (reportName, deadlineStr) =>
+            `"${reportName}" — срок сдачи был "${deadlineStr}"`
+    });
 }
