@@ -36,16 +36,6 @@ const MONTHS = {
     "декабря": 11
 };
 
-function normalizeToday() {
-    const now = new Date();
-
-    return new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-    );
-}
-
 function parseDate(dateString) {
 
     const parts = dateString.split(".");
@@ -61,6 +51,9 @@ function parseDate(dateString) {
 function lastDayOfMonth(year, month) {
     return new Date(year, month + 1, 0);
 }
+
+const DAY_REGEX =
+    /^(\d{1,2})\s+([А-Яа-я]+)\s+(\d{4})/i;
 
 export function parseReportPeriod(reportPeriod) {
 
@@ -82,10 +75,7 @@ export function parseReportPeriod(reportPeriod) {
     // 1 февраля 2026 г.
     // -----------------------------
 
-    const dayRegex =
-        /^(\d{1,2})\s+([А-Яа-я]+)\s+(\d{4})/i;
-
-    const dayMatch = value.match(dayRegex);
+    const dayMatch = value.match(DAY_REGEX);
 
     if (dayMatch) {
 
@@ -128,11 +118,75 @@ export function parseReportPeriod(reportPeriod) {
 
 }
 
-export function isExpired(reportPeriod) {
+// Отчет за конкретный день ("9 июля 2026 г."), в отличие от
+// недельного диапазона ("01.07.2026 - 09.07.2026") или месяца ("Июль 2026 г.").
+export function isDailyReportPeriod(reportPeriod) {
 
-    const deadline =
+    const value = reportPeriod.trim();
+
+    return !value.includes("-") && DAY_REGEX.test(value);
+
+}
+
+const DEADLINE_DATE_REGEX =
+    /Дата сдачи:\s*(\d{1,2})\.(\d{1,2})/i;
+
+const DEADLINE_TIME_REGEX =
+    /Время сдачи:\s*(\d{1,2}):(\d{2})/i;
+
+export function hasDeadlineTime(comment) {
+    return Boolean(comment) && DEADLINE_TIME_REGEX.test(comment);
+}
+
+// Разбирает комментарий вида "Дата сдачи: 09.07; Время сдачи: 10:00"
+// (для ежемесячных отчетов) или "Время сдачи: 10:00" (для остальных)
+// и возвращает точный дедлайн (дата + время сдачи).
+export function getDeadline(reportPeriod, comment) {
+
+    let deadlineDate =
         parseReportPeriod(reportPeriod);
 
-    return normalizeToday() > deadline;
+    if (comment) {
+
+        const dateMatch =
+            comment.match(DEADLINE_DATE_REGEX);
+
+        if (dateMatch) {
+
+            const day = Number(dateMatch[1]);
+            const month = Number(dateMatch[2]) - 1;
+
+            deadlineDate = new Date(
+                deadlineDate.getFullYear(),
+                month,
+                day
+            );
+
+        }
+
+    }
+
+    let hours = 0;
+    let minutes = 0;
+
+    if (comment) {
+
+        const timeMatch =
+            comment.match(DEADLINE_TIME_REGEX);
+
+        if (timeMatch) {
+            hours = Number(timeMatch[1]);
+            minutes = Number(timeMatch[2]);
+        }
+
+    }
+
+    return new Date(
+        deadlineDate.getFullYear(),
+        deadlineDate.getMonth(),
+        deadlineDate.getDate(),
+        hours,
+        minutes
+    );
 
 }

@@ -27,8 +27,10 @@ export function logCheckStarted() {
     logger.info("🔍 Checking overdue reports...");
 }
 
-export function logCheckFinished(count) {
-    logger.info(`✅ Check completed. Found ${count} overdue report(s).`);
+export function logCheckFinished(dueTodayCount, overdueCount = 0) {
+    logger.info(
+        `✅ Check completed. Found ${dueTodayCount} report(s) due today, ${overdueCount} overdue.`
+    );
 }
 
 export function logNoReports() {
