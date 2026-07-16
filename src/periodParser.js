@@ -138,6 +138,26 @@ export function hasDeadlineTime(comment) {
     return Boolean(comment) && DEADLINE_TIME_REGEX.test(comment);
 }
 
+// Отчеты с одной из этих меток в комментарии не отправляются в MAX
+// независимо от срока сдачи (например, ими занимается другой отдел).
+const EXCLUDED_COMMENT_MARKERS = [
+    "Другой отдел"
+];
+
+export function isExcludedByComment(comment) {
+
+    if (!comment) {
+        return false;
+    }
+
+    const normalized = comment.toLowerCase();
+
+    return EXCLUDED_COMMENT_MARKERS.some(
+        marker => normalized.includes(marker.toLowerCase())
+    );
+
+}
+
 // Разбирает комментарий вида "Дата сдачи: 09.07; Время сдачи: 10:00"
 // (для ежемесячных отчетов) или "Время сдачи: 10:00" (для остальных)
 // и возвращает точный дедлайн (дата + время сдачи).

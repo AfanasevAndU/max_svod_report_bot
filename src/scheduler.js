@@ -84,7 +84,7 @@ export function startScheduler() {
 
     // Каждый день в 09:00
     cron.schedule(
-        "36 14 * * *",
+        "12 9 * * *",
         async () => {
 
             logger.info(
@@ -102,7 +102,7 @@ export function startScheduler() {
 
     // Каждый день в 14:00
     cron.schedule(
-        "37 14 * * *",
+        "5 11 * * *",
         async () => {
 
             logger.info(

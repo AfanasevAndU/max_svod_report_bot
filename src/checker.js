@@ -1,5 +1,10 @@
 import { getReports } from "./clickhouse.js";
-import { getDeadline, isDailyReportPeriod, hasDeadlineTime } from "./periodParser.js";
+import {
+    getDeadline,
+    isDailyReportPeriod,
+    hasDeadlineTime,
+    isExcludedByComment
+} from "./periodParser.js";
 import {
     logger,
     logCheckStarted,
@@ -28,6 +33,12 @@ export async function checkReports() {
     for (const report of reports) {
 
         try {
+
+            // Отчет с меткой-исключением в комментарии (например "Другой отдел")
+            // не отправляем в MAX, независимо от срока сдачи.
+            if (isExcludedByComment(report.comment)) {
+                continue;
+            }
 
             // Ежедневный отчет без указанного времени сдачи в комментарии
             // не отправляем в MAX.
