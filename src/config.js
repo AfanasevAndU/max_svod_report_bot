@@ -74,15 +74,13 @@ function parseDepartments(env) {
 
 const departmentChats = parseDepartments(process.env);
 
-// Возвращает chat_id для отдела, либо общий MAX_CHAT_ID как фолбэк.
+// Возвращает chat_id отдела, либо null, если отдел не указан
+// или для него не задан chat_id (тогда отчёт не отправляется).
 export function resolveChatId(department) {
 
-    if (department) {
-        const chatId = departmentChats.get(String(department).trim().toLowerCase());
-        if (chatId) {
-            return chatId;
-        }
+    if (!department) {
+        return null;
     }
 
-    return config.MAX_CHAT_ID;
+    return departmentChats.get(String(department).trim().toLowerCase()) || null;
 }

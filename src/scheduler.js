@@ -18,13 +18,19 @@ async function sendIfPresent(reports, formatFn) {
         return;
     }
 
-    // Группируем отчёты по чату отдела: у каждого отдела свой chat_id,
-    // отчёты без известного отдела уходят в общий MAX_CHAT_ID.
+    // Группируем отчёты по чату отдела: у каждого отдела свой chat_id.
+    // Отчёты без отдела или без заданного chat_id не отправляются.
     const reportsByChat = new Map();
+    const skipped = [];
 
     for (const report of reports) {
 
         const chatId = resolveChatId(report.department);
+
+        if (!chatId) {
+            skipped.push(report);
+            continue;
+        }
 
         if (!reportsByChat.has(chatId)) {
             reportsByChat.set(chatId, []);
@@ -32,6 +38,16 @@ async function sendIfPresent(reports, formatFn) {
 
         reportsByChat.get(chatId).push(report);
 
+    }
+
+    if (skipped.length > 0) {
+        const departments = [
+            ...new Set(skipped.map(report => report.department || "(пусто)"))
+        ];
+        logger.warn(
+            { count: skipped.length, departments },
+            "Отчёты без чата отдела пропущены (не отправлены)"
+        );
     }
 
     for (const [chatId, chatReports] of reportsByChat) {
