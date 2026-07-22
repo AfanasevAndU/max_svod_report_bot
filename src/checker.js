@@ -1,22 +1,11 @@
 import { getReports } from "./clickhouse.js";
-import {
-    getDeadline,
-    isDailyReportPeriod,
-    hasDeadlineTime,
-    isExcludedByComment
-} from "./periodParser.js";
+import { buildDeadline } from "./periodParser.js";
 import {
     logger,
     logCheckStarted,
     logCheckFinished,
     logNoReports
 } from "./logger.js";
-
-function isSameDay(a, b) {
-    return a.getFullYear() === b.getFullYear()
-        && a.getMonth() === b.getMonth()
-        && a.getDate() === b.getDate();
-}
 
 export async function checkReports() {
 
@@ -32,54 +21,38 @@ export async function checkReports() {
 
     for (const report of reports) {
 
-        try {
+        // Дедлайн: дата окончания периода (period_end = сегодня) + время сдачи.
+        const deadline = buildDeadline(report.period_end, report.deadline_time);
 
-            // Отчет с меткой-исключением в комментарии (например "Другой отдел")
-            // не отправляем в MAX, независимо от срока сдачи.
-            if (isExcludedByComment(report.comment)) {
-                continue;
-            }
-
-            // Ежедневный отчет без указанного времени сдачи в комментарии
-            // не отправляем в MAX.
-            if (
-                isDailyReportPeriod(report.report_period)
-                && !hasDeadlineTime(report.comment)
-            ) {
-                continue;
-            }
-
-            const deadline =
-                getDeadline(report.report_period, report.comment);
-
-            const mapped = {
-                reportPeriod: report.report_period,
-                organization: report.organization,
-                reportName: report.report_name,
-                status: report.status,
-                comment: report.comment,
-                deadline
-            };
-
-            if (isSameDay(deadline, now)) {
-                dueTodayReports.push(mapped);
-
-                if (deadline > now) {
-                    dueLaterReports.push(mapped);
-                } else {
-                    overdueReports.push(mapped);
-                }
-            }
-
-        } catch (err) {
-
+        if (!deadline) {
             logger.warn(
                 {
-                    reportPeriod: report.report_period
+                    period: report.period,
+                    periodEnd: report.period_end,
+                    deadlineTime: report.deadline_time
                 },
-                "Unknown report_period format"
+                "Cannot build deadline from period_end/deadline_time"
             );
+            continue;
+        }
 
+        const mapped = {
+            reportPeriod: report.period,
+            organization: report.organization,
+            reportName: report.report_type,
+            status: report.state,
+            comment: report.template_comment,
+            deadline
+        };
+
+        // Все строки — сегодняшние (загрузчик отбирает periodEnd = сегодня),
+        // поэтому каждая попадает в «сдать сегодня».
+        dueTodayReports.push(mapped);
+
+        if (deadline > now) {
+            dueLaterReports.push(mapped);
+        } else {
+            overdueReports.push(mapped);
         }
 
     }

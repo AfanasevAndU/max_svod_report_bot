@@ -16,6 +16,12 @@ const schema = z.object({
 
     TIMEZONE: z.string().default("Asia/Yekaterinburg"),
 
+    // Расписание рассылки (cron). Загрузчик пишет данные в 08:00/13:00/16:00,
+    // бот шлёт напоминания после — по умолчанию 09:00/14:00/17:00.
+    MORNING_CRON: z.string().default("0 9 * * *"),
+    MIDDAY_CRON: z.string().default("0 14 * * *"),
+    EVENING_CRON: z.string().default("0 17 * * *"),
+
     NODE_ENV: z
         .enum(["development", "production"])
         .default("development")

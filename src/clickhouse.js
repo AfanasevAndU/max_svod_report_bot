@@ -13,25 +13,45 @@ const client = createClient({
     database: config.CLICKHOUSE_DATABASE
 });
 
+// Сегодняшняя дата (YYYY-MM-DD) в часовом поясе бота — совпадает с тем,
+// как загрузчик пишет load_date.
+function todayInTimezone(timezone) {
+    return new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).format(new Date());
+}
+
 export async function getReports() {
+
+    // Таблицу заполняет загрузчик svod_reports: в ней уже только отчёты,
+    // которые нужны боту (bot=true), с непустым deadline_time и periodEnd=сегодня.
+    // Берём снимок за сегодня и отсеиваем уже подготовленные.
+    const today = todayInTimezone(config.TIMEZONE);
 
     const query = `
         SELECT
-            report_period,
             organization,
-            report_name,
-            status,
-            comment
+            report_type,
+            state,
+            period,
+            period_end,
+            deadline_time,
+            template_comment
         FROM ${config.CLICKHOUSE_TABLE}
-        WHERE status != 'Подготовлен'
+        WHERE load_date = {today:Date}
+          AND state != 'Подготовлен'
     `;
 
     try {
 
-        logger.debug("Loading reports from ClickHouse...");
+        logger.debug(`Loading reports from ClickHouse for ${today}...`);
 
         const result = await client.query({
             query,
+            query_params: { today },
             format: "JSONEachRow"
         });
 

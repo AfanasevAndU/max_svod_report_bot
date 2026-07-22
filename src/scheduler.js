@@ -80,15 +80,18 @@ export function startScheduler() {
     logger.info(
         `Scheduler started. Timezone: ${config.TIMEZONE}`
     );
+    logger.info(
+        `Cron: morning ${config.MORNING_CRON}, midday ${config.MIDDAY_CRON}, evening ${config.EVENING_CRON}`
+    );
 
 
-    // Каждый день в 09:00
+    // Утро — отчёты, которые нужно сдать сегодня
     cron.schedule(
-        "12 9 * * *",
+        config.MORNING_CRON,
         async () => {
 
             logger.info(
-                "09:00 scheduled run"
+                "Morning scheduled run"
             );
 
             await runMorningCheck();
@@ -100,13 +103,13 @@ export function startScheduler() {
     );
 
 
-    // Каждый день в 14:00
+    // День — «ещё нужно сдать» + «просрочено»
     cron.schedule(
-        "5 11 * * *",
+        config.MIDDAY_CRON,
         async () => {
 
             logger.info(
-                "14:00 scheduled run"
+                "Midday scheduled run"
             );
 
             await runIntradayCheck();
@@ -118,13 +121,13 @@ export function startScheduler() {
     );
 
 
-    // Каждый день в 17:00
+    // Вечер — «ещё нужно сдать» + «просрочено»
     cron.schedule(
-        "0 17 * * *",
+        config.EVENING_CRON,
         async () => {
 
             logger.info(
-                "17:00 scheduled run"
+                "Evening scheduled run"
             );
 
             await runIntradayCheck();
