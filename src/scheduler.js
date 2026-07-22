@@ -8,7 +8,7 @@ import {
 } from "./formatter.js";
 import { sendMessage } from "./bot.js";
 
-import { config } from "./config.js";
+import { config, resolveChatId } from "./config.js";
 import { logger } from "./logger.js";
 
 
@@ -18,10 +18,30 @@ async function sendIfPresent(reports, formatFn) {
         return;
     }
 
-    const messages = formatFn(reports);
+    // Группируем отчёты по чату отдела: у каждого отдела свой chat_id,
+    // отчёты без известного отдела уходят в общий MAX_CHAT_ID.
+    const reportsByChat = new Map();
 
-    for (const message of messages) {
-        await sendMessage(message);
+    for (const report of reports) {
+
+        const chatId = resolveChatId(report.department);
+
+        if (!reportsByChat.has(chatId)) {
+            reportsByChat.set(chatId, []);
+        }
+
+        reportsByChat.get(chatId).push(report);
+
+    }
+
+    for (const [chatId, chatReports] of reportsByChat) {
+
+        const messages = formatFn(chatReports);
+
+        for (const message of messages) {
+            await sendMessage(message, chatId);
+        }
+
     }
 
 }

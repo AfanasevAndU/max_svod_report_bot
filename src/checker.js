@@ -39,6 +39,7 @@ export async function checkReports() {
         const mapped = {
             reportPeriod: report.period,
             organization: report.organization,
+            department: report.department,
             reportName: report.report_type,
             status: report.state,
             comment: report.template_comment,

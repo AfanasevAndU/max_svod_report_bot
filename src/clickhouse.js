@@ -34,6 +34,7 @@ export async function getReports() {
     const query = `
         SELECT
             organization,
+            department,
             report_type,
             state,
             period,

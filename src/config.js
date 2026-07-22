@@ -40,3 +40,49 @@ if (!parsed.success) {
 }
 
 export const config = parsed.data;
+
+
+// Маршрутизация по отделам.
+// В .env задаются пары DEPARTMENT_<n>_NAME / DEPARTMENT_<n>_CHAT_ID.
+// Отчёт с полем department отправляется в чат своего отдела;
+// если отдел не задан или не найден — в общий MAX_CHAT_ID.
+function parseDepartments(env) {
+
+    const indices = new Set();
+
+    for (const key of Object.keys(env)) {
+        const match = key.match(/^DEPARTMENT_(\d+)_NAME$/);
+        if (match) {
+            indices.add(match[1]);
+        }
+    }
+
+    const map = new Map();
+
+    for (const index of indices) {
+        const name = (env[`DEPARTMENT_${index}_NAME`] || "").trim();
+        const chatId = (env[`DEPARTMENT_${index}_CHAT_ID`] || "").trim();
+
+        if (name && chatId) {
+            // Ключ в нижнем регистре — устойчивость к регистру в данных API.
+            map.set(name.toLowerCase(), chatId);
+        }
+    }
+
+    return map;
+}
+
+const departmentChats = parseDepartments(process.env);
+
+// Возвращает chat_id для отдела, либо общий MAX_CHAT_ID как фолбэк.
+export function resolveChatId(department) {
+
+    if (department) {
+        const chatId = departmentChats.get(String(department).trim().toLowerCase());
+        if (chatId) {
+            return chatId;
+        }
+    }
+
+    return config.MAX_CHAT_ID;
+}

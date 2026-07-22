@@ -7,7 +7,7 @@ import { logger } from "./logger.js";
 const bot = new Bot(config.MAX_BOT_TOKEN);
 
 
-export async function sendMessage(text) {
+export async function sendMessage(text, chatId = config.MAX_CHAT_ID) {
 
     try {
 
@@ -15,7 +15,7 @@ export async function sendMessage(text) {
 
 
         const result = await bot.api.sendMessageToChat(
-            config.MAX_CHAT_ID,
+            chatId,
             message
         );
 
