@@ -16,7 +16,8 @@ export async function sendMessage(text, chatId = config.MAX_CHAT_ID) {
 
         const result = await bot.api.sendMessageToChat(
             chatId,
-            message
+            message,
+            { format: "markdown" }
         );
 
 

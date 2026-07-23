@@ -19,6 +19,12 @@ function formatDeadline(date) {
 
 }
 
+// Сообщения уходят в MAX с format: "markdown", поэтому спецсимволы
+// в названиях отчетов и МО нужно экранировать, иначе разметка поедет.
+function escapeMarkdown(text) {
+    return String(text).replace(/([\\`*_~\[\]])/g, "\\$1");
+}
+
 // Группирует отчеты по названию, а внутри - по дедлайну,
 // чтобы не повторять его для каждой МО, у которой он совпадает.
 function buildReportBlocks(reports, buildReportLine) {
@@ -59,9 +65,9 @@ function buildReportBlocks(reports, buildReportLine) {
         for (const { deadline, organizations } of Object.values(groupedByDeadline)) {
 
             const lines = [
-                buildReportLine(reportName, formatDeadline(deadline)),
+                buildReportLine(escapeMarkdown(reportName), formatDeadline(deadline)),
                 "Не заполнили:",
-                ...organizations.map(organization => `🏢 ${organization}`)
+                ...organizations.map(organization => `🏢 ${escapeMarkdown(organization)}`)
             ];
 
             blocks.push(lines.join("\n"));
@@ -138,7 +144,7 @@ export function formatDueTodayReports(reports) {
         greeting: "Доброе утро!",
         intro: "Уважаемые коллеги, напоминаю о необходимости заполнения следующих отчетов в 1С:Свод отчетов:",
         buildReportLine: (reportName, deadlineStr) =>
-            `"${reportName}" до "${deadlineStr}"`
+            `**"${reportName}"** до "${deadlineStr}"`
     });
 }
 
@@ -147,7 +153,7 @@ export function formatDueLaterReports(reports) {
         greeting: null,
         intro: "Уважаемые коллеги, напоминаю о необходимости заполнения следующих отчетов в 1С:Свод отчетов:",
         buildReportLine: (reportName, deadlineStr) =>
-            `"${reportName}" до "${deadlineStr}"`
+            `**"${reportName}"** до "${deadlineStr}"`
     });
 }
 
@@ -156,6 +162,6 @@ export function formatOverdueReports(reports) {
         greeting: null,
         intro: "Уважаемые коллеги, следующие отчеты в 1С:Свод отчетов просрочены:",
         buildReportLine: (reportName, deadlineStr) =>
-            `"${reportName}" — срок сдачи был "${deadlineStr}"`
+            `**"${reportName}"** — срок сдачи был "${deadlineStr}"`
     });
 }
