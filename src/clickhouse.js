@@ -44,6 +44,8 @@ export async function getReports() {
         FROM ${config.CLICKHOUSE_TABLE}
         WHERE load_date = {today:Date}
           AND state != 'Подготовлен'
+          AND state != 'Утвержден'
+          AND state != 'Показатели отсутствуют'
     `;
 
     try {
