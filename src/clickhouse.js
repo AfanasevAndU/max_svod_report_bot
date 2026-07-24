@@ -39,6 +39,7 @@ export async function getReports() {
             state,
             period,
             period_end,
+            deadline_date,
             deadline_time,
             template_comment
         FROM ${config.CLICKHOUSE_TABLE}

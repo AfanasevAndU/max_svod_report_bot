@@ -21,8 +21,10 @@ export async function checkReports() {
 
     for (const report of reports) {
 
-        // Дедлайн: дата окончания периода (period_end = сегодня) + время сдачи.
-        const deadline = buildDeadline(report.period_end, report.deadline_time);
+        // Дедлайн: дата сдачи (deadline_date уже учитывает смещение и перенос
+        // с выходных; для старых строк без неё — period_end) + время сдачи.
+        const deadlineDate = report.deadline_date || report.period_end;
+        const deadline = buildDeadline(deadlineDate, report.deadline_time);
 
         if (!deadline) {
             logger.warn(
